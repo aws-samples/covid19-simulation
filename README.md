@@ -126,22 +126,11 @@ Objective: Development and execution workload on the local machine end-to-end:
 **Running Notebooks on AWS**
 While logged on to your AWS account, click on the link to quick create the AWS CloudFormation Stack for the region you want to run your notebook:
 ​
-<table>
-  <tr>
-    <th colspan="3">AWS Region</td>
-    <th>AWS CloudFormation</td>
-  </tr>
-  <tr>
-    <td>US West</td>
-    <td>Oregon</td>
-    <td>us-west-2</td>
-    <td align="center">
-      <a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack">
-        <img src="media/launch_button.svg" height="30">
-      </a>
-    </td>
-  </tr>
-</table>
+Region name | Region code | Launch
+--- | --- | ---
+US East (N. Virginia) | us-east-1 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
+US West (Oregon) | us-west-2 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
+Europe (Ireland) | eu-west-1 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
 
 **Running SageMaker Notebooks from Local Machine (interventions_scorer_sagemaker.ipynb and covid19_simulator_sagemker.ipynb)**
 Objective: Development on Local machine and only execution using AWS SageMaker:
