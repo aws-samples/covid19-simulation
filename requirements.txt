@@ -1,0 +1,8 @@
+xgboost==1.1.1
+numpy==1.19.1
+pandas==0.22.0
+sklearn==0.0
+scikit-learn==0.23.1
+scipy==1.5.0
+matplotlib==3.3.1
+pygithub==1.53

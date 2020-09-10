@@ -1,0 +1,6 @@
+*.iml
+data/output
+data/input/Cases_*
+*.ipynb_checkpoints
+.idea
+__pycache__
