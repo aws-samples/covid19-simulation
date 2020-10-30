@@ -2,20 +2,14 @@
 
 ## Overview
 
-This software simulates COVID-19 case projections at various regional granularity level. The output is the projection of the total confirmed cases over a specific timeline for a target state or a country, for a given degree of intervention. We have provided a few sample simulations at state and country levels in covid19_simulator.ipynb, covid19_simulator_USA_states.ipynb and covid19_simulator_India_states.ipynb notebooks. 
+This software simulates COVID-19 case projections at various regional granularity level. The output is the projection of the total confirmed cases over a specific timeline for a target state or a country, for a given degree of intervention. We have provided a few sample simulations at state and country levels in covid19_simulator.ipynb notebook. 
 
 In terms of the working methodology, this solution first tries to understand the transmission rates and the time to peak of the 1st wave from the daily COVID-19 cases for the target entity (state/country). Next, it selects the best (optimal) parameters using optimization techniques on a stochastic simulation model. The simulation model is subsequently re-invoked with the optimized parameters and intervention scores to generate a case-count projection for a configurable time frame. Refer to the section **Intervention Impact Scoring** for details on how to score the relative effectiveness of different interventions for a country and to the section **Simulation Orchestration** for more information on running the simulations.
 
 The core simulation model is a bottom-up, stochastic approach, in which each individual is simulated separately with variability in the disease progression. Subsequently, individuals are aggregated to generate population level statistics. The variability in the disease model accounts for current uncertainties in the disease progression. This simulation approach incorporates insights from medical journal publications elaborating recurring waves of Influenza pandemics, notably https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0060343. It assumes two waves of infection surges following Gaussian distributions and uses the distributions while generating the infection case-count projections in a probabilistic manner. In absence of any historical data on COVID-19 pandemic, data on Influenza Pandemics has been considered as a similar, relatable baseline in this data-driven approach. 
 Additionally, the simulation also incorporates various crucial factors, like transmission probability, testing efficiency, transmission control level, intervention impacts, etc. to come up with more realistic projections.
 
-Though our sample notebooks demonstrate simulations at country and state levels, the approach is generic enough to be applied at other granularity levels, such as, county, district, city, etc.
-
-
-## License
-
-This project is licensed under the Apache 2.0 License.
-
+Though our sample notebooks demonstrate simulations at country and state levels, the approach is generic enough to be applied at other granularity levels, such as, county, district, city, etc. Please refer to our [blog](https://aws.amazon.com/blogs/machine-learning/introducing-the-covid-19-simulator-and-machine-learning-toolkit-for-predicting-covid-19-spread/) for more information on the simulation methodology and sample predictions.  
 
 ## Key Components
 
@@ -33,7 +27,6 @@ The 3 ways to score the intervention effectiveness are as follows:
 
 Finally, these 3 scores can be combined using a configurable weighted average. Though these approaches would be affected by the correlations among the interventions, as a whole, it can offer an approximate relative importance view of the interventions.
 These intervention impacts or weights can be used to come up with a single aggregated intervention score for a country on a daily basis. The intervention data used are at country level only. Country level data might not be a good approximation for states, as states have varying degrees of intervention and violation. Hence, while trying to project for individual states, we recommend collecting similar data at that respective state level. 
-
 
 ### Simulation Orchestration
 
@@ -53,7 +46,6 @@ Our simulator models the disease transmission using underlying gaussian probabil
 
 * get_disease_transmission_stats: primary coordinator method that finds the required data points around the transmission patterns
 * get_periodic_relative_changes: computes the rate of change (of case count), relative rate of change and the peak/plateau points for countries
-
 
 ### Core Simulation
 
@@ -76,8 +68,6 @@ utils module bundles all the simulation related methods that are invoked by simu
 * population_init_infections: Infects a subset of the population based on the input case rate to initiate the simulation process.
 * update_population_infections: Models the daily spread of the infection based on the simulation_curve (probability distribution), transmission control and interventions. transmission control parameter is learnt and supplied by the simulation_orchestrator.
 
-
-
 ## Data Sources
 
 This project is a generic framework and we tested it with the data-sources mentioned below. However, this framework can work as-is on any dataset sourced from other agencies, as long as they follow the same schema. Users can choose other data schemas as well if they make necessary changes to the code.
@@ -86,8 +76,6 @@ This project is a generic framework and we tested it with the data-sources menti
 * **Daily confirmed cases for countries**: COVID-19 Data published by Center for Systems Science and Engineering (CSSE) at Johns Hopkins University (https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master)
 * **Daily confirmed cases for Indian States**: Data aggregated by covid19india.org from news bulletins and Govt. handles (https://api.covid19india.org/csv/latest/state_wise_daily.csv)
 * **Country Populations**: Country population data from the World Bank (https://databank.worldbank.org/reports.aspx?source=2&series=SP.POP.TOTL&country=)
-
-
 
 ## Configurability
 
@@ -114,12 +102,9 @@ Key config parameters (from src/config.py) that can be tweaked as per requiremen
 * wave1_weeks_default_range_low = 1, wave1_weeks_default_range_high = 5 (Default min and max number of weeks to reach wave-1 peak for optimization)
 * optimization_trials_low = 40, optimization_trials_high = 60 (Optimization/learning trials (runs) min and max)
 
-
-
-
 ## Running the code
 
-### **Environment setup**
+### Environment setup
 
 **Running the Notebooks (interventions_scorer.ipynb and covid19_simulator.ipynb)**
 Objective: Development and execution workload on the local machine end-to-end:
@@ -128,6 +113,15 @@ Objective: Development and execution workload on the local machine end-to-end:
 * Install Python 3.6+
 * Install the necessary libraries (pip install -r requirements.txt)
 * Develop on / run the code baseline using Jupyter Notebook
+
+**Running Notebooks on AWS**
+While logged on to your AWS account, click on the link to quick create the AWS CloudFormation Stack for the region you want to run your notebook:
+​
+Region name | Region code | Launch
+--- | --- | ---
+US East (N. Virginia) | us-east-1 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
+US West (Oregon) | us-west-2 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
+Europe (Ireland) | eu-west-1 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
 
 **Running SageMaker Notebooks from Local Machine (interventions_scorer_sagemaker.ipynb and covid19_simulator_sagemker.ipynb)**
 Objective: Development on Local machine and only execution using Amazon SageMaker:
@@ -172,4 +166,12 @@ On your local machine:
 For SageMaker:
 - Use interventions_scorer_sagemaker and covid19_simulator_sagemaker instead of the regular notebooks to run the simulations on Amazon SageMaker
 - Specify the appropriate S3 bucket and IAM role in the SageMaker notebooks before running them
+
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## License
+
+This project is licensed under the Apache-2.0 License.
 
