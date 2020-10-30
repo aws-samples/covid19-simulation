@@ -18,6 +18,7 @@ import skopt.plots
 import matplotlib
 from matplotlib import pyplot as plt
 from datetime import datetime
+from pathlib import Path
 
 import gc
 import warnings
@@ -625,7 +626,9 @@ def run(country_code,
     sim_data.weeks_between_disease_waves = weeks_between_disease_waves
     sim_data.wave2_peak_factor = wave2_peak_factor
     sim_data.wave2_spread_factor = wave2_spread_factor
-    
+
+    Path("data/output").mkdir(parents=True, exist_ok=True)
+
     sim_data, status_code = prep_projection(country_code, state, sim_data, learn_params=True)
     
     if status_code == 0:
