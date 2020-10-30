@@ -30,9 +30,10 @@ gap_weeks_between_disease_waves_default = 25
 transmission_prob_default = 0.005
 wave2_peak_factor_default = 3
 wave2_spread_factor_default = 1
+number_of_people_to_infect_default = 3
 
 
-# Infra parameters
+# Infra/data parameters
 base_data_dir = 'data/input'
 base_output_dir = 'data/output'
 
@@ -60,17 +61,20 @@ country_populations_data = 'country_population_WorldBank.csv'
 india_states_cases_online = 'https://api.covid19india.org/csv/latest/state_wise_daily.csv'
 india_states_cases_offline = 'india_state_wise_daily.csv'
 
+usa_populations_data_online ='https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/state/detail/SCPRC-EST2019-18+POP-RES.csv'
+usa_populations_data_offline = 'population_usa_states_census.csv'
+    
 us_counties_cases_online = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
 us_counties_cases_offline = 'us-counties.csv'
 
 country_covid19_cases = 'countries/Cases_{}.csv'
 country_covid19_params_export_path = 'countries/params_{}.csv'
-country_simulation_results_path = 'countries/projections_{}_{}_{}.csv'
+country_simulation_results_path = 'countries/projections_{}_{}.csv'
 country_simulation_data_path = 'countries/sim_data_{}.pkl'
-state_covid19_cases = 'Cases_{}.csv'
+state_covid19_cases = 'Cases_{}_{}.csv'
 us_covid19_cases = 'covid_19_daily_reports_us.csv'
-state_covid19_params_export_path = 'params_{}.csv'
-state_simulation_results_path = 'projections_{}_{}_{}.csv'
+state_covid19_params_export_path = 'params_{}_{}.csv'
+state_simulation_results_path = 'projections_{}_{}.csv'
 state_simulation_data_path = 'sim_data_{}.pkl'
 
 county_cases_filename = Path(__file__).parent / '../data/us-counties_4_26.txt'
@@ -81,35 +85,11 @@ county_population_filename = Path(__file__).parent / '../data/county-population.
 
 # Consider a country for comparison if its total case count exceeds this threshold
 min_country_conf_case_threshold = 25000
-# Number of time intervals to use while comparing case rate changes between two countries
-match_spans = 5
-# Number of days in each comparison interval of match_spans
+# time window (in days) while measuring periodic changes
 period = 3
-# Start Date (DDMMYYYY) for considering infection data
-overall_start_date = '15012020'
-# Maximum distance (error) threshold for selecting countries with matching case rate trend
-sim_dist_threshold = 0.2
-# Weightage of similarity trend match while selecting reference countries
-trend_sim_weightage = 0.25
-# Weightage of population proximity while selecting reference countries
-population_sim_weightage = 0.75
-
-# Minimum number of reference countries required to enable case rate adjustment based on reference countries' trends
-min_relevant_countries_count = 5
-# Enable/Disable reference country based case rate adjustment
-enable_case_rate_adjustment = True
-# Maximum scaling factor of case rate based on trends of reference countries
-max_rate_adjustment_factor = 3.0
 
 # Percentage/fraction of influence of the interventions on disease transmission
 intervention_influence_pctg_default = 1.0
-
-# Whether to use the default range (1, 5) for wave1_weeks optimization
-use_default_wave1_weeks_range = False
-
-# Whether to optimize the number of weeks to reach the peak of infection Wave-1. If False, the number derived from
-# the reference countries or median of default range will be used
-optimize_wave1_weeks = True
 
 # Maximum population size for simulation (higher number will increase the duration of simulation cycles)
 n_population_max = 3000
@@ -121,21 +101,15 @@ min_initial_infection = 5
 # Max number of days to fit while optimizing the simulation parameters
 fitment_period_max = 365
 
-# Default higher and lower bound factors
-higher_bound_min = 1.2
-lower_bound_min = 0.2
-
-# Min and max range for transmission probability optimization
-#transmission_prob_range_min = 0.00005
-#transmission_prob_range_max = 0.005
-transmission_strength_range_min = 0.05
-transmission_strength_range_max = 1.0
+# Min and max range for transmission control optimization
+transmission_control_range_min = 0.05
+transmission_control_range_max = 1.0
 
 # Default min and max number of weeks to reach wave-1 peak for optimization
 wave1_weeks_default_range_low = 1
 wave1_weeks_default_range_high = 5
 
 # Optimization trials (runs) min and max, and job count
-optimization_trials_low = 20
-optimization_trials_high = 30
+optimization_trials_low = 40
+optimization_trials_high = 60
 optimization_jobs = 4

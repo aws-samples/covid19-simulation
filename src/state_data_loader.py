@@ -37,7 +37,7 @@ def load_india(states):
         df_state.index = pd.to_datetime(df_state.index)
         df_state[['Total_Confirmed', 'Total_Deceased', 'Total_Recovered']] \
             = df_state[['Confirmed', 'Deceased', 'Recovered']].cumsum(axis=0, skipna=True)
-        df_state.to_csv(os.path.join(config.base_data_dir, config.state_covid19_cases.format(target_state)))
+        df_state.to_csv(os.path.join(config.base_data_dir, config.state_covid19_cases.format('IND', target_state)))
 
 
 def load_us(states, latest=False):

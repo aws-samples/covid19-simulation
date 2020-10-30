@@ -16,7 +16,6 @@ def toss_coin():
 def incidence_rate_curve(n_days, wave1_weeks, peak_wave1, peak_wave2, mu1, mu2, wave2_spread_factor):
     #sigma = 7 * 4
     sigma = int (7 * max (12, wave1_weeks) / 3)
-    #sigma = 7 * max (4, wave1_weeks)
     
     timeline = max (366, n_days+1)
     prob = np.zeros((timeline, 1))
@@ -699,42 +698,23 @@ def update_population_infections(learning_phase, total_active, incidence_rate_an
     # ASSUMPTION: Newly joining are not infected or have immunity, we ignore infected asymptomatics joining in
     bin_based_transmission_prob = transmission_prob  # 0.005
     
-    #bin_based_transmission_prob = 0.0005
-    
-    #  1.0 if exists, 0.0 if not
-    #transmission_control = 1.0
-    
     intervention_score = intervention_score if intervention_score >= 0.1 else 0.1
 
     overall_transmission_possibility = 1
-    # When intervention_score is maximum (i.e. 1), no additional boost for transmission_exists variable, but with
-    # reduction in intervention stringency the transmission_exists value will increase accordingly, which in turn will
-    # increase the spread of infection.
     
-    #intervention_influence_pctg *= 0.7
-    #intervention_influence_pctg = transmission_prob
+    # Model intervention influence on transmission. transmission_control represents the transmission manageability via
+    # interventions.
     if intervention_score is not None and intervention_score > 0:
-#         overall_transmission_possibility = ((1 - intervention_influence_pctg) * overall_transmission_possibility) + \
-#                                            (intervention_influence_pctg * overall_transmission_possibility * (
-#                                                    1 - intervention_score))
-                
-#         overall_transmission_possibility = transmission_control + ((1 - transmission_control) * 
-#                                                                     (1 - intervention_score * intervention_influence_pctg))
-        
         overall_transmission_possibility = (1 - transmission_control) + (transmission_control * (1 - intervention_score))
         
-        
-#    overall_transmission_possibility = transmission_prob
-        
     # basic number
-    number_of_people_to_infect = 3
+    number_of_people_to_infect = config.number_of_people_to_infect_default
 
     incidence_rate_today = incidence_rate_annual[current_day]
 
     num_new_infections = 0
     num_new_transmission_infections = 0
     
-    count, count1 = 0, 0
     # transmission over the weekdays only
     for person in population:
         if current_day % 7 < 5:
@@ -760,9 +740,7 @@ def update_population_infections(learning_phase, total_active, incidence_rate_an
                                 person.transmission_network.append([person_infected.p_id, current_day])
                                 continue
 
-        # infect if the join day is not the current day
         if not person.exposure and not person.igg and (person.join_day < current_day):
-            count += 1
             toss_coin_prob = toss_coin()
             if total_active >= 2:
                 active_case_fraction_log = (np.log(total_active) / np.log(len(population)))
@@ -770,15 +748,10 @@ def update_population_infections(learning_phase, total_active, incidence_rate_an
                 active_case_fraction_log = (np.log(2) / np.log(len(population)))
                 
             if toss_coin_prob <= incidence_rate_today * overall_transmission_possibility * active_case_fraction_log:
-                count1 += 1
                 person.exposure = True
                 person.infection_contracted.append(current_day)
                 person.infectiousness_distribution = infectiousness_distribution()
                 num_new_infections += 1
-    
-    learning_phase = True
-    if not learning_phase and current_day < 50:
-        print (current_day, incidence_rate_today, num_new_infections, num_new_transmission_infections, overall_transmission_possibility, intervention_score, count, count1, total_active, len(population), (num_new_infections + num_new_transmission_infections))
 
     return num_new_infections, num_new_transmission_infections
 

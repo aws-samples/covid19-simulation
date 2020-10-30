@@ -1,15 +1,21 @@
-# COVID-19 Simulation
+# COVID-19 Simulation Toolkit Read-me
 
 ## Overview
 
-This software simulates COVID-19 case projections at various regional granularity level. The output is the projection of the total confirmed cases over a specific timeline for a target state or a country, for a given degree of intervention. We have provided a few sample simulations at state and country levels in covid19_simulator.ipynb notebook. 
+This software simulates COVID-19 case projections at various regional granularity level. The output is the projection of the total confirmed cases over a specific timeline for a target state or a country, for a given degree of intervention. We have provided a few sample simulations at state and country levels in covid19_simulator.ipynb, covid19_simulator_USA_states.ipynb and covid19_simulator_India_states.ipynb notebooks. 
 
-In terms of the working methodology, this solution first tries to understand the approximate time to peak of the daily COVID-19 cases for the target entity (state/country), expected case rates and associated higher & lower bounds. It determines the ranges for these parameters from countries that have exhibited similar case rate growth trends in the past. Next, it selects the best (optimal) parameters using optimization techniques on a simulation model. The simulation model is subsequently re-invoked with the optimized parameters and intervention scores to generate a case-count projection for a configurable time frame. Refer to the section **Intervention Impact Scoring** for details on how to score the relative effectiveness of different interventions for a country and to the section **Simulation Orchestration** for more information on running the simulations.
+In terms of the working methodology, this solution first tries to understand the transmission rates and the time to peak of the 1st wave from the daily COVID-19 cases for the target entity (state/country). Next, it selects the best (optimal) parameters using optimization techniques on a stochastic simulation model. The simulation model is subsequently re-invoked with the optimized parameters and intervention scores to generate a case-count projection for a configurable time frame. Refer to the section **Intervention Impact Scoring** for details on how to score the relative effectiveness of different interventions for a country and to the section **Simulation Orchestration** for more information on running the simulations.
 
-The core simulation model is a bottom-up, stochastic approach, in which each individual is simulated separately with variability in the disease progression. Subsequently, individuals are aggregated to generate population level statistics. The variability in the disease model accounts for current uncertainties in the disease progression. This simulation approach incorporates insights from medical journal publications elaborating recurring waves of Influenza pandemics, notably https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0060343. It assumes two waves of infection surges following Gaussian distributions and uses the distributions while generating the infection case-count projections in a probabilistic manner. In absence of any historical data on COVID-19 pandemic, data on Influenza Pandemics has been considered as a similar, relatable baseline in this data-driven solution. 
-Additionally, the simulation also incorporates various crucial factors, like transmission probability, testing efficiency, intervention impacts, attrition, etc. to come up with more realistic projections.
+The core simulation model is a bottom-up, stochastic approach, in which each individual is simulated separately with variability in the disease progression. Subsequently, individuals are aggregated to generate population level statistics. The variability in the disease model accounts for current uncertainties in the disease progression. This simulation approach incorporates insights from medical journal publications elaborating recurring waves of Influenza pandemics, notably https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0060343. It assumes two waves of infection surges following Gaussian distributions and uses the distributions while generating the infection case-count projections in a probabilistic manner. In absence of any historical data on COVID-19 pandemic, data on Influenza Pandemics has been considered as a similar, relatable baseline in this data-driven approach. 
+Additionally, the simulation also incorporates various crucial factors, like transmission probability, testing efficiency, transmission control level, intervention impacts, etc. to come up with more realistic projections.
 
 Though our sample notebooks demonstrate simulations at country and state levels, the approach is generic enough to be applied at other granularity levels, such as, county, district, city, etc.
+
+
+## License
+
+This project is licensed under the Apache 2.0 License.
+
 
 ## Key Components
 
@@ -28,6 +34,7 @@ The 3 ways to score the intervention effectiveness are as follows:
 Finally, these 3 scores can be combined using a configurable weighted average. Though these approaches would be affected by the correlations among the interventions, as a whole, it can offer an approximate relative importance view of the interventions.
 These intervention impacts or weights can be used to come up with a single aggregated intervention score for a country on a daily basis. The intervention data used are at country level only. Country level data might not be a good approximation for states, as states have varying degrees of intervention and violation. Hence, while trying to project for individual states, we recommend collecting similar data at that respective state level. 
 
+
 ### Simulation Orchestration
 
 **covid19_simulator.ipynb (SageMaker version: covid19_simulator_sagemker.ipynb)**
@@ -36,18 +43,17 @@ Notebook to run the simulation for a target location (country, state, etc.). Thi
 **simulation_orchestrator.py**
 Manages the end-to-end simulation flow involving data transformation, parameters learning, simulation execution, visualization, etc. Some of its key methods are:
 
-* run: first learns the best parameters for the given entity (state/country) and timelines and then invokes simulation for the projection days
-* prep_projection: Finds the best parameter ranges (for time-to-peak and transmission probability) by comparing against other countries and subsequently runs optimization to determine the best parameters
+* run: first learns the best parameters for the given entity (state/country) and timelines and then invokes simulation for the projection timeline
+* prep_projection: Finds the best parameter ranges (for transmission control and time-to-peak) via optimization
 * project: Runs simulation with the parameters found in prep_projection
 * simulate: Invokes the simulation module on a small population size and scales the projections with respect to the actual population size of the target state or country
 
 **case_trends_finder.py**
-When the COVID-19 cases are spreading in a particular region, it is not possible to estimate the duration and extent of the spread, just by looking at the data of that region alone. A more practical approach is to understand the possibilities from the data of other countries that have exhibited similar trends in the past. This is the purpose of the case_trends_finder module.
-Given the latest case-rate growth trend of a region it first identifies the countries that have shown similar trends in the past and eventually plateaued. From these reference countries, it determines the possible time-to-peak, mean/median daily growth rates until the peak, and higher and lower bounds of growth rates. These data points are used by the simulation_orchestrator for parameter optimization and simulation execution. Some of the key methods are:
+Our simulator models the disease transmission using underlying gaussian probability distributions. Hence, we need to feed the simulator with the parameters for the distributions, which differ across population groups (countries, states, etc.). We do a sliding window analysis of the smoothened daily confirmed cases data to detect the starting points and the peaks of the 1st and 2nd waves. These information along with statistics on transmission rates are subsequently used to infer the parameters of the distributions.
 
-* run: primary coordinator method that finds the required data points (time-to-peak, growth rates, bounds, etc.) and returns the weighted average using target country's similarity of trend as well as population with the candidate countries
+* get_disease_transmission_stats: primary coordinator method that finds the required data points around the transmission patterns
 * get_periodic_relative_changes: computes the rate of change (of case count), relative rate of change and the peak/plateau points for countries
-* get_top_matches: Finds the best matching countries and match points by comparing relative rate of changes using a sliding window approach
+
 
 ### Core Simulation
 
@@ -66,9 +72,11 @@ It is the primary simulation module. It executes the following key tasks to gene
 **utils.py**
 utils module bundles all the simulation related methods that are invoked by simulation.py. Some of the important methods are:
 
-* incidence_rate_curve: It generates the dual-wave Gaussian distributions to control the simulation using the probability of infection spread on a particular day, based on that day's position in the distribution. The mean of the first distribution, which indicates the remaining time to peak of the first wave, was learnt by the simulation_orchestrator and passed as an input parameter.
+* incidence_rate_curve: It generates the dual-wave Gaussian distributions to control the simulation using the probability of infection spread on a particular day, based on that day's position in the distribution. The mean of the first distribution, which indicates the remaining time to peak of the first wave, is extracted/learnt by the simulation_orchestrator and passed as an input parameter.
 * population_init_infections: Infects a subset of the population based on the input case rate to initiate the simulation process.
-* update_population_infections: Models the daily spread of the infection based on the simulation_curve (probability distribution), transmission probability and interventions. transmission probability parameter is learnt and supplied by the simulation_orchestrator. Intervention scores are optional. Intervention scores as well as intervention's influence level (e.g. 50% or 75%) are also sent by simulation_orchestrator as input parameters.
+* update_population_infections: Models the daily spread of the infection based on the simulation_curve (probability distribution), transmission control and interventions. transmission control parameter is learnt and supplied by the simulation_orchestrator.
+
+
 
 ## Data Sources
 
@@ -79,6 +87,8 @@ This project is a generic framework and we tested it with the data-sources menti
 * **Daily confirmed cases for Indian States**: Data aggregated by covid19india.org from news bulletins and Govt. handles (https://api.covid19india.org/csv/latest/state_wise_daily.csv)
 * **Country Populations**: Country population data from the World Bank (https://databank.worldbank.org/reports.aspx?source=2&series=SP.POP.TOTL&country=)
 
+
+
 ## Configurability
 
 Parameters and constants are configured in **src/config.py**. These can be altered as per requirement.
@@ -88,49 +98,36 @@ Configuration parameters represent following 3 groups:
 * Optimization parameters: Used in determining the optimal parameters for simulation. Examples: includes n_population, fitment_period_max, transmission_prob_range_min, optimization_trials_low, trend_sim_weightage, population_sim_weightage, enable_case_rate_adjustment, etc.
 * Infra parameters: Represents links, directories, files, etc. Examples: base_data_dir, country_populations_data, intervention_scores_loc, etc.
 
-Key optimization parameters (from src/config.py) that can be tweaked as per requirements are as follows:
+Key config parameters (from src/config.py) that can be tweaked as per requirements are as follows:
+
+* gap_weeks_between_disease_waves_default = 25 (default gap between 1st and 2nd disease waves in weeks)
+* transmission_prob_default = 0.005 (default transmission probability)
+* wave2_peak_factor_default = 3, wave2_spread_factor_default = 1 (Wave-2 distribution parameter scales with respect to wave-1 distribution)
+* number_of_people_to_infect_default = 3 (default number of people to be infected by an already infected person)
 
 * min_country_conf_case_threshold = 25000 (Consider a country for case rate trend comparison only if its total case count exceeds this threshold)
-* match_spans = 7 (Number of time intervals to use while comparing case rate changes between two countries)
-* period = 2 (Number of days in each comparison interval of match_spans parameter)
-* overall_start_date = '15012020' (Start Date (DDMMYYYY) for considering infection data)
-* sim_dist_threshold = 0.2 (Maximum distance (error) threshold for selecting countries with matching case rate trend)
-* trend_sim_weightage = 0.25 (Weightage of similarity trend match while selecting reference countries)
-* population_sim_weightage = 0.75 (Weightage of population proximity while selecting reference countries)
-* min_relevant_countries_count = 5 (Minimum number of reference countries required to enable case rate adjustment based on reference country's trends)
-* enable_case_rate_adjustment = False (Enable/Disable reference country based case rate adjustment)
-* max_rate_adjustment_factor = 3.0 (Maximum scaling factor of case rate based on trends of reference countries)
-* intervention_influence_pctg = 0.75 (Percentage/fraction of influence of the interventions on disease transmission)
-* optimize_wave1_weeks=False (whether to optimize the number of weeks to reach the peak of infection Wave-1. If False, the number derived from the reference countries will be used)
+* period = 3 (time window (in days) while measuring periodic changes)
 * n_population_max = 5000 (Maximum population size for simulation (higher number will increase the duration of simulation cycles))
 * n_population = 3000 (Preferred population size for simulation)
 * min_initial_infection = 5 (Minimum existing infection count while initiating the simulation (actual infection rate would be scaled up/down to ensure this minimum count))
-* fitment_period_max = 21 (Max number of days to fit while optimizing the simulation parameters)
-* higher_bound_min = 1.2, lower_bound_min = 0.2 (Default higher and lower bound factors)
-* transmission_prob_range_min = 0.00005, transmission_prob_range_max = 0.005 (Min and max range for transmission probability optimization)
+* transmission_control_range_min = 0.05, transmission_control_range_max = 1.0 (Min and max range for transmission control optimization)
 * wave1_weeks_default_range_low = 1, wave1_weeks_default_range_high = 5 (Default min and max number of weeks to reach wave-1 peak for optimization)
-* optimization_trials_low = 50, optimization_trials_high = 100, optimization_jobs = 8 (Optimization trials (runs) min and max, and job count)
+* optimization_trials_low = 40, optimization_trials_high = 60 (Optimization/learning trials (runs) min and max)
+
+
+
 
 ## Running the code
 
-### Environment setup
+### **Environment setup**
 
 **Running the Notebooks (interventions_scorer.ipynb and covid19_simulator.ipynb)**
 Objective: Development and execution workload on the local machine end-to-end:
 
-* Memory required: 8 GB (minimum), 16 GB (preferred) 
+* Memory required: 8 GB (minimum), 16+ GB (preferred) 
 * Install Python 3.6+
 * Install the necessary libraries (pip install -r requirements.txt)
 * Develop on / run the code baseline using Jupyter Notebook
-
-**Running Notebooks on AWS**
-While logged on to your AWS account, click on the link to quick create the AWS CloudFormation Stack for the region you want to run your notebook:
-​
-Region name | Region code | Launch
---- | --- | ---
-US East (N. Virginia) | us-east-1 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
-US West (Oregon) | us-west-2 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
-Europe (Ireland) | eu-west-1 | [![Launch Stack](https://cdn.rawgit.com/buildkite/cloudformation-launch-stack-button-svg/master/launch-stack.svg)](https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/create/review?templateURL=https://aws-ml-blog.s3.amazonaws.com/artifacts/Covid19-Simulation/covid.yaml&stackName=covid19-simulation-stack)
 
 **Running SageMaker Notebooks from Local Machine (interventions_scorer_sagemaker.ipynb and covid19_simulator_sagemker.ipynb)**
 Objective: Development on Local machine and only execution using AWS SageMaker:
@@ -150,7 +147,7 @@ On your local machine:
 
 ***** You can also run the whole project using Jupyter labs in AWS SageMaker directly.**
 
-### Running the code
+### Code execution
 
 1. Make necessary configuration alterations in src/config.py (if required) 
 
@@ -158,35 +155,21 @@ On your local machine:
    2.1. Set LOAD_LATEST_DATA as True to download the latest intervention data from source. Set it as False in case of subsequent runs during the same day.
    2.2. Run the notebook to score and persist the country-level, daily intervention weights (once every day should be good enough). These scores will be used while generating the infection projections.
     
-3. Generate infection projections at state / country levels using covid19_simulator.ipynb:
+3. Generate sample infection projections at country level using covid19_simulator.ipynb (or sample state-level alternatives):
    3.1. Set LOAD_LATEST_DATA as True to download the latest infection data for simulation. Set it as False in case of subsequent runs during the same day.
    3.2. Configure the target states / countries and control params as follows:
 ```
-    # Whether to learn the best params on the latest data or use the parameters learnt last time
-    learn_params = True
-    # Days to use for simulation parameters optimization
-    fitment_days = 14
-    # Latest n number of days to leave for testing
-    test_days = 5
-    # Total projection timeline
-    projection_days = 270
     # Parameters related to the target location
-    country_code, state, state_population, actual_testing_capacity = 'IND', 'KA', 61095297, 11000
+    country_code, state, state_population, actual_testing_capacity = 'IND', 'KL', 33406061, 6000
+    # Future projection timeline (days)
+    projection_days = 180
 ``` 
    3.3. Run the notebook to generate the case projections for the states / countries specified
 ```     
-    run (country_code, state, state_population, actual_testing_capacity, fitment_days, test_days, projection_days, learn_params)
+    run (country_code, state, state_population, actual_testing_capacity, future_projection_days, country_level_projection=False)
 ``` 
 
 For SageMaker:
 - Use interventions_scorer_sagemaker and covid19_simulator_sagemaker instead of the regular notebooks to run the simulations on AWS SageMaker
 - Specify the appropriate S3 bucket and IAM role in the SageMaker notebooks before running them
-
-## Security
-
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
-
-## License
-
-This project is licensed under the Apache-2.0 License.
 
