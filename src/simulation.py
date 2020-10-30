@@ -11,27 +11,32 @@ from utils import Person, incidence_rate_curve, get_pcr_schedule, population_ini
 
 
 class Simulation:
-    def __init__(self, state_population, wave1_weeks, case_rate, active_case_population_fraction,
-                 daily_case_population_fraction, testing_capacity, transmission_prob=0.005, log_results=True,
-                 intervention_influence_pctg=config.intervention_influence_pctg):
+    def __init__(self, state_population, n_days, wave1_weeks, weeks_between_waves, case_rate, active_case_population_fraction,
+                 daily_case_population_fraction, testing_capacity, transmission_strength, 
+                 transmission_prob=config.transmission_prob_default, intervention_influence_pctg=config.intervention_influence_pctg_default, 
+                 wave2_peak_factor=config.wave2_peak_factor_default, wave2_spread_factor=config.wave2_spread_factor_default, 
+                 log_results=True):
         # state, county, county_population = get_county_info(fips)
         self.active_case_population_fraction = active_case_population_fraction
         self.daily_case_population_fraction = daily_case_population_fraction
+        self.transmission_strength = transmission_strength
         self.transmission_prob = transmission_prob
         self.testing_capacity = testing_capacity
         self.log_results = log_results
+        self.wave1_weeks = wave1_weeks
         self.intervention_influence_pctg = intervention_influence_pctg
         
         peak_wave1 = case_rate  # get_incidence_rate(df_state, state_population)
-        peak_wave2 = 3 * peak_wave1
+        peak_wave2 = wave2_peak_factor * peak_wave1
         mu1 = wave1_weeks * 7
-        mu2 = mu1 + 25 * 7
+        mu2 = mu1 + weeks_between_waves * 7
 
-        self.incidence_rate_annual = incidence_rate_curve(peak_wave1, peak_wave2, mu1, mu2)
+        self.incidence_rate_annual = incidence_rate_curve(n_days, wave1_weeks, peak_wave1, peak_wave2, mu1, mu2, wave2_spread_factor)
         self.prevalence_rate_annual = np.cumsum(self.incidence_rate_annual)
 
-        self.pcr_schedule_ = get_pcr_schedule()
+        self.pcr_schedule_ = get_pcr_schedule(n_days)
         self.pcr_schedule = [int(1 + state_population / 14) for _ in self.pcr_schedule_]
+        
 
     @staticmethod
     def set_config(
@@ -84,8 +89,11 @@ class Simulation:
         config.awaiting_on_pcr_test_result = awaiting_on_pcr_test_result
         config.add_ab = add_ab
 
-    def run(self, n_days, n_population, intervention_scores=None):
+    def run(self, learning_phase, n_days, n_population, intervention_scores=None):
         total_infections = 0
+        total_recovered = 0
+        total_active = 0
+        new_infections = list()
 
         pcr_test_tracker = []  # results every day
 
@@ -233,17 +241,28 @@ class Simulation:
                             'Sent To Quarantine': sent_to_quarantine,
                             'Total Quarantine Administered': num_total_quarantine_administered,
                             'Initial immune': num_immune_before_day_0}
+            new_infections.append(num_total_new_cases)
             total_infections += num_total_new_cases
-
+            total_recovered += recovered
+            init_active = int(self.active_case_population_fraction * len(population))
+            
+            wave1_spread_factor = self.wave1_weeks / 4
+            active_population_contrib_window = max (5, int(np.round(5 * wave1_spread_factor)))
+            total_active = max(0, int(np.round(init_active * (active_population_contrib_window - day) / active_population_contrib_window))) + np.sum(new_infections[-min(7,day):-min(2,day)])
+            
             report_out_list.append(metrics_dict)
             
-            intervention_score = None
+            intervention_score = 0
             if intervention_scores is not None:
-                intervention_score = intervention_scores[day]
+                end_day = max(0, day - 1)
+                start_day = max(0, end_day - 2)
+                intervention_score = np.mean(intervention_scores[start_day:day]) if start_day != end_day else intervention_scores[start_day]
+                #intervention_score = np.mean(intervention_scores)
             # NEEDS to be here because will impact the current day if above...
             # [!!IMP!!] add new infections, for the next day
-            num_new_infections, num_new_transmission_infections = update_population_infections(
-                self.incidence_rate_annual, population, day, self.transmission_prob, self.intervention_influence_pctg,
-                intervention_score=intervention_score)
+
+            num_new_infections, num_new_transmission_infections = update_population_infections(learning_phase, 
+                total_active, self.incidence_rate_annual, population, day, self.transmission_prob, self.transmission_strength, self.intervention_influence_pctg, intervention_score=intervention_score)
+
 
         return [], report_out_list, population

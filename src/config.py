@@ -22,9 +22,14 @@ ab_tests_sent_per_day = 0
 time_between_consecutive_pcr_tests = 14
 pcr_test_result_positive_probability = 0.01
 initial_antibody_immunity_in_population = 0
-infected_and_symptomatic_in_population = 0.14
+infected_and_symptomatic_in_population = 0.25
 symptom_covid_vs_flu = 0
 awaiting_on_pcr_test_result = 0
+gap_weeks_between_disease_waves_default = 25
+
+transmission_prob_default = 0.005
+wave2_peak_factor_default = 3
+wave2_spread_factor_default = 1
 
 
 # Infra parameters
@@ -97,7 +102,7 @@ enable_case_rate_adjustment = True
 max_rate_adjustment_factor = 3.0
 
 # Percentage/fraction of influence of the interventions on disease transmission
-intervention_influence_pctg = 0.75
+intervention_influence_pctg_default = 1.0
 
 # Whether to use the default range (1, 5) for wave1_weeks optimization
 use_default_wave1_weeks_range = False
@@ -109,26 +114,28 @@ optimize_wave1_weeks = True
 # Maximum population size for simulation (higher number will increase the duration of simulation cycles)
 n_population_max = 3000
 # Preferred population size for simulation
-n_population = 1500
+n_population = 1000
 # Minimum existing infection count while initiating the simulation (actual infection rate would be scaled up/down to
 # ensure this minimum count)
 min_initial_infection = 5
 # Max number of days to fit while optimizing the simulation parameters
-fitment_period_max = 21
+fitment_period_max = 365
 
 # Default higher and lower bound factors
 higher_bound_min = 1.2
 lower_bound_min = 0.2
 
 # Min and max range for transmission probability optimization
-transmission_prob_range_min = 0.00005
-transmission_prob_range_max = 0.005
+#transmission_prob_range_min = 0.00005
+#transmission_prob_range_max = 0.005
+transmission_strength_range_min = 0.05
+transmission_strength_range_max = 1.0
 
 # Default min and max number of weeks to reach wave-1 peak for optimization
 wave1_weeks_default_range_low = 1
 wave1_weeks_default_range_high = 5
 
 # Optimization trials (runs) min and max, and job count
-optimization_trials_low = 100
-optimization_trials_high = 150
-optimization_jobs = 8
+optimization_trials_low = 20
+optimization_trials_high = 30
+optimization_jobs = 4

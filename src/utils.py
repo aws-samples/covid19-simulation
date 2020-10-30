@@ -7,23 +7,28 @@ from io import StringIO
 import config
 
 
+
 def toss_coin():
     return np.random.uniform(0, 1, None)
 
 
-# https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0060343
-def incidence_rate_curve(peak_wave1, peak_wave2, mu1, mu2):
-    sigma = 7 * 4
-
-    prob = np.zeros((366, 1))
+#https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0060343
+def incidence_rate_curve(n_days, wave1_weeks, peak_wave1, peak_wave2, mu1, mu2, wave2_spread_factor):
+    #sigma = 7 * 4
+    sigma = int (7 * max (12, wave1_weeks) / 3)
+    #sigma = 7 * max (4, wave1_weeks)
+    
+    timeline = max (366, n_days+1)
+    prob = np.zeros((timeline, 1))
     for dd in range(len(prob)):
         prob[dd] = 1 / (sigma * np.sqrt(2 * np.pi)) * np.exp(- (dd - mu1) ** 2 / (2 * sigma ** 2))
     scale = peak_wave1 / max(prob)
     prob1 = scale * prob
+    
+    #sigma2 = 7 * 2
+    sigma2 = sigma * wave2_spread_factor
 
-    sigma2 = 7 * 2
-
-    prob = np.zeros((366, 1))
+    prob = np.zeros((timeline, 1))
     for dd in range(len(prob)):
         prob[dd] = 1 / (sigma2 * np.sqrt(2 * np.pi)) * np.exp(- (dd - mu2) ** 2 / (2 * sigma2 ** 2))
     scale = peak_wave2 / max(prob)
@@ -31,6 +36,9 @@ def incidence_rate_curve(peak_wave1, peak_wave2, mu1, mu2):
 
     # shift to start in week x
     prob = np.add(prob1, prob2)
+    
+    prob_cutoff = np.percentile(prob, 50)
+    prob[prob == 0] = np.random.uniform(low=0.0, high=prob_cutoff, size=(len(prob[prob == 0]),))
 
     return [val[0] for val in prob]
 
@@ -587,7 +595,11 @@ def population_init_infections(population, incidence_rate_annual, case_populatio
     # create people who are currently infected and does not have immunity
     # number_of_new_infections = int(incidence_rate_annual[0] * len(population))
     # Initialize infected population based on current infection rate
-    number_of_new_infections = int(case_population_fraction * len(population))
+    number_of_new_infections = 0
+    #if case_population_fraction > 0:
+    #    number_of_new_infections = int(case_population_fraction * len(population))
+    
+    #print (number_of_new_infections)
 
     # give N percent after immunity
     for ii in randomized_population[number_of_immune:(number_of_immune + number_of_new_infections)]:
@@ -642,8 +654,9 @@ def get_population(filename, fc_code):
     return n_population
 
 
-def get_pcr_schedule():
-    return [420] * 365
+def get_pcr_schedule(n_days):
+    timeline = max (365, n_days)
+    return [420] * timeline
 
 
 def get_model_outcome_metrics(population, day):
@@ -681,24 +694,38 @@ def get_model_outcome_metrics(population, day):
            num_total_exposed, num_total_quarantine_administered
 
 
-def update_population_infections(incidence_rate_annual, population, current_day, transmission_prob,
-                                 intervention_influence_pctg, intervention_score=None):
+def update_population_infections(learning_phase, total_active, incidence_rate_annual, population, current_day, transmission_prob,
+                                 transmission_control, intervention_influence_pctg, intervention_score=None):
     # ASSUMPTION: Newly joining are not infected or have immunity, we ignore infected asymptomatics joining in
     bin_based_transmission_prob = transmission_prob  # 0.005
-
+    
+    #bin_based_transmission_prob = 0.0005
+    
     #  1.0 if exists, 0.0 if not
-    transmission_exists = 1.0
+    #transmission_control = 1.0
+    
+    intervention_score = intervention_score if intervention_score >= 0.1 else 0.1
 
     overall_transmission_possibility = 1
     # When intervention_score is maximum (i.e. 1), no additional boost for transmission_exists variable, but with
     # reduction in intervention stringency the transmission_exists value will increase accordingly, which in turn will
     # increase the spread of infection.
+    
+    #intervention_influence_pctg *= 0.7
+    #intervention_influence_pctg = transmission_prob
     if intervention_score is not None and intervention_score > 0:
-        # transmission_exists = min((transmission_exists / intervention_score), 1)
-        overall_transmission_possibility = ((1 - intervention_influence_pctg) * overall_transmission_possibility) + \
-                                           (intervention_influence_pctg * overall_transmission_possibility * (
-                                                   1 - intervention_score))
-
+#         overall_transmission_possibility = ((1 - intervention_influence_pctg) * overall_transmission_possibility) + \
+#                                            (intervention_influence_pctg * overall_transmission_possibility * (
+#                                                    1 - intervention_score))
+                
+#         overall_transmission_possibility = transmission_control + ((1 - transmission_control) * 
+#                                                                     (1 - intervention_score * intervention_influence_pctg))
+        
+        overall_transmission_possibility = (1 - transmission_control) + (transmission_control * (1 - intervention_score))
+        
+        
+#    overall_transmission_possibility = transmission_prob
+        
     # basic number
     number_of_people_to_infect = 3
 
@@ -706,7 +733,8 @@ def update_population_infections(incidence_rate_annual, population, current_day,
 
     num_new_infections = 0
     num_new_transmission_infections = 0
-
+    
+    count, count1 = 0, 0
     # transmission over the weekdays only
     for person in population:
         if current_day % 7 < 5:
@@ -718,7 +746,7 @@ def update_population_infections(incidence_rate_annual, population, current_day,
                     transmission_probability = transmission_probability * infected_days
 
                     # only within transmission probability
-                    if toss_coin() <= transmission_probability:
+                    if toss_coin() < transmission_probability:
                         # N different persons instead of the same person
                         subpopulation_infected = np.random.choice(population, number_of_people_to_infect,
                                                                   replace=False)
@@ -734,12 +762,23 @@ def update_population_infections(incidence_rate_annual, population, current_day,
 
         # infect if the join day is not the current day
         if not person.exposure and not person.igg and (person.join_day < current_day):
+            count += 1
             toss_coin_prob = toss_coin()
-            if toss_coin_prob <= incidence_rate_today * transmission_exists * overall_transmission_possibility:
+            if total_active >= 2:
+                active_case_fraction_log = (np.log(total_active) / np.log(len(population)))
+            else:
+                active_case_fraction_log = (np.log(2) / np.log(len(population)))
+                
+            if toss_coin_prob <= incidence_rate_today * overall_transmission_possibility * active_case_fraction_log:
+                count1 += 1
                 person.exposure = True
                 person.infection_contracted.append(current_day)
                 person.infectiousness_distribution = infectiousness_distribution()
                 num_new_infections += 1
+    
+    learning_phase = True
+    if not learning_phase and current_day < 50:
+        print (current_day, incidence_rate_today, num_new_infections, num_new_transmission_infections, overall_transmission_possibility, intervention_score, count, count1, total_active, len(population), (num_new_infections + num_new_transmission_infections))
 
     return num_new_infections, num_new_transmission_infections
 
