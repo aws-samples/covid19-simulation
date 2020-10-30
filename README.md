@@ -130,7 +130,7 @@ Objective: Development and execution workload on the local machine end-to-end:
 * Develop on / run the code baseline using Jupyter Notebook
 
 **Running SageMaker Notebooks from Local Machine (interventions_scorer_sagemaker.ipynb and covid19_simulator_sagemker.ipynb)**
-Objective: Development on Local machine and only execution using AWS SageMaker:
+Objective: Development on Local machine and only execution using Amazon SageMaker:
 On your local machine:
 
 * Install Docker
@@ -145,7 +145,7 @@ On your local machine:
 * Run Docker
 * Run your target SageMaker notebooks from Jupyter
 
-***** You can also run the whole project using Jupyter labs in AWS SageMaker directly.**
+***** You can also run the whole project using Jupyter labs in Amazon SageMaker directly.**
 
 ### Code execution
 
@@ -170,6 +170,6 @@ On your local machine:
 ``` 
 
 For SageMaker:
-- Use interventions_scorer_sagemaker and covid19_simulator_sagemaker instead of the regular notebooks to run the simulations on AWS SageMaker
+- Use interventions_scorer_sagemaker and covid19_simulator_sagemaker instead of the regular notebooks to run the simulations on Amazon SageMaker
 - Specify the appropriate S3 bucket and IAM role in the SageMaker notebooks before running them
 
